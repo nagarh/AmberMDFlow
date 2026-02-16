@@ -1,0 +1,4 @@
+source leaprc.protein.ff14SB
+protein = loadpdb /home/hn533621/AmberMDFlow/output/1_protein_no_hydrogens.pdb
+savepdb protein receptor.pdb
+quit

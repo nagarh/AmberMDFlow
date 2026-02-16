@@ -1,0 +1,20 @@
+source leaprc.protein.ff14SB
+source leaprc.water.tip3p
+source leaprc.gaff2
+
+loadamberparams MK1.frcmod
+MK1 = loadmol2 MK1.mol2
+
+x = loadpdb tleap_ready.pdb
+
+charge x
+
+addions x Cl- 0.0
+
+solvateBox x TIP3PBOX 10
+
+saveamberparm x protein.prmtop protein.inpcrd
+
+savepdb x protein_solvated.pdb
+
+quit

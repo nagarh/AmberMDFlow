@@ -1,0 +1,97 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ambermdflow"
+version = "0.1.3"
+description = "Web-based MD simulation pipeline with AMBER, ESMFold, docking, and PLUMED"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Hemant Nagar", email = "hn533621@ohio.edu"}
+]
+keywords = [
+    "molecular-dynamics",
+    "amber",
+    "md-simulation",
+    "protein-structure",
+    "esmfold",
+    "docking",
+    "autodock-vina",
+    "plumed",
+    "computational-chemistry",
+    "bioinformatics"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Framework :: Flask",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+requires-python = ">=3.10"
+
+# Core dependencies installable via pip
+# Note: Users MUST install these via conda FIRST (not available on PyPI):
+#   conda install -c conda-forge ambertools pymol-open-source vina openbabel rdkit gemmi
+# These conda packages also provide: numpy, pandas, matplotlib (don't override them)
+dependencies = [
+    "flask==2.3.3",
+    "flask-cors==4.0.0",
+    "biopython",
+    "seaborn",
+    "mdanalysis",
+    "gunicorn==21.2.0",
+    "requests",
+    "meeko>=0.7.0",
+    "prody",
+    "numpy<2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+]
+
+[project.urls]
+Homepage = "https://huggingface.co/spaces/hemantn/AmberMDFlow"
+Documentation = "https://github.com/nagarh/AmberMDFlow"
+Repository = "https://github.com/nagarh/AmberMDFlow"
+Issues = "https://github.com/nagarh/AmberMDFlow/issues"
+
+[project.scripts]
+ambermdflow = "ambermdflow.__main__:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ambermdflow*"]
+
+[tool.setuptools.package-data]
+ambermdflow = [
+    "html/*.html",
+    "css/*.css",
+    "js/*.js",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 100

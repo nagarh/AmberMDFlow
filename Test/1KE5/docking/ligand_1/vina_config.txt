@@ -1,0 +1,28 @@
+# AutoDock Vina Configuration File
+# Ligand 1
+
+# Search space center (Angstroms)
+center_x = -9.32
+center_y = 48.38
+center_z = 38.16
+
+# Search space size (Angstroms)
+size_x = 16.0
+size_y = 16.0
+size_z = 20.0
+
+# Exhaustiveness of the global search (default: 8)
+# Higher values give better results but take longer
+exhaustiveness = 8
+
+# Number of binding modes to generate (default: 9)
+num_modes = 9
+
+# Maximum energy difference between the best binding mode and the worst one displayed (kcal/mol, default: 3)
+energy_range = 3
+
+# Optional: CPU usage (default: 0 = use all available CPUs)
+cpu = 0
+
+# Optional: Seed for random number generator (default: 0 = random)
+seed = 0

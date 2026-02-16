@@ -1,0 +1,11 @@
+Minimization
+&cntrl
+imin=1,
+maxcyc=20000,
+ncyc=5000,
+ntb=1,
+cut=10,
+igb=0,
+ntr=0,
+/
+

@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MD Simulation Pipeline</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/plumed.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- THREE.js (needed for docking box visualization) - using r95 to match NGL's bundled version -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r95/three.min.js"></script>
+    <!-- NGL 3D Molecular Viewer -->
+    <script src="https://unpkg.com/ngl@2.0.0-dev.35/dist/ngl.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-atom"></i> MD Simulation Pipeline</h1>
+                <p>Molecular Dynamics Simulation Setup and File Generation</p>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tab-navigation">
+            <button class="tab-button active" data-tab="protein-loading">
+                <i class="fas fa-upload"></i> Protein Loading
+            </button>
+            <button class="tab-button" data-tab="fill-missing">
+                <i class="fas fa-puzzle-piece"></i> Fill Missing Residues
+            </button>
+            <button class="tab-button" data-tab="structure-prep">
+                <i class="fas fa-tools"></i> Structure Preparation
+            </button>
+            <button class="tab-button" data-tab="simulation-params">
+                <i class="fas fa-cogs"></i> Simulation Parameters
+            </button>
+            <button class="tab-button" data-tab="simulation-steps">
+                <i class="fas fa-list-ol"></i> Simulation Steps
+            </button>
+            <button class="tab-button" data-tab="file-generation">
+                <i class="fas fa-file-download"></i> Generate Files
+            </button>
+            <button class="tab-button" data-tab="plumed">
+                <i class="fas fa-chart-line"></i> PLUMED
+            </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Protein Loading Tab -->
+            <div id="protein-loading" class="tab-content active">
+                <div class="card">
+                    <h2><i class="fas fa-dna"></i> Protein Structure Input</h2>
+                    
+                    <div class="input-methods">
+                        <div class="method-option">
+                            <h3><i class="fas fa-file-upload"></i> Upload PDB File</h3>
+                            <div class="file-upload-area" id="file-upload-area">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Drag and drop your PDB file here or click to browse</p>
+                                <input type="file" id="pdb-file" accept=".pdb,.ent" style="display: none;">
+                                <button type="button" class="btn btn-secondary" id="choose-file-btn">
+                                    Choose File
+                                </button>
+                            </div>
+                            <div id="file-info" class="file-info" style="display: none;">
+                                <p><strong>Selected file:</strong> <span id="file-name"></span></p>
+                                <p><strong>Size:</strong> <span id="file-size"></span></p>
+                            </div>
+                        </div>
+
+                        <div class="divider">
+                            <span>OR</span>
+                        </div>
+
+                        <div class="method-option">
+                            <h3><i class="fas fa-database"></i> Fetch from PDB</h3>
+                            <div class="pdb-fetch">
+                                <div class="input-group">
+                                    <label for="pdb-id">PDB ID:</label>
+                                    <input type="text" id="pdb-id" placeholder="e.g., 1CRN, 1HTM" maxlength="4">
+                                    <button type="button" class="btn btn-primary" id="fetch-pdb">
+                                        <i class="fas fa-download"></i> Fetch
+                                    </button>
+                                </div>
+                                <div id="pdb-status" class="status-message"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="protein-preview" id="protein-preview" style="display: none;">
+                        <h3><i class="fas fa-eye"></i> Protein Preview</h3>
+                        <div class="preview-content">
+                            <div class="protein-info">
+                                <p><strong>Structure ID:</strong> <span id="structure-id"></span></p>
+                                <p><strong>Number of atoms (Protein):</strong> <span id="atom-count"></span></p>
+                                <p><strong>Chains:</strong> <span id="chain-info"></span></p>
+                                <p><strong>Residues:</strong> <span id="residue-count"></span></p>
+                                <p><strong>Water molecules:</strong> <span id="water-count"></span></p>
+                                <p><strong>Ions:</strong> <span id="ion-count"></span></p>
+                                <p><strong>Ligands:</strong> <span id="ligand-info"></span></p>
+                                <p><strong>HETATM entries:</strong> <span id="hetatm-count"></span></p>
+                            </div>
+                            <div class="protein-visualization">
+                                <div id="molecule-viewer" class="molecule-viewer">
+                                    <!-- 3D visualization will be added here -->
+                                    <div id="ngl-viewer" style="width: 100%; height: 100%; min-height: 300px;"></div>
+                                    <div id="viewer-controls" class="viewer-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-secondary" onclick="mdPipeline.resetView()">
+                                            <i class="fas fa-home"></i> Reset View
+                                        </button>
+                                        <button class="btn btn-sm btn-secondary" onclick="mdPipeline.toggleRepresentation()">
+                                            <i class="fas fa-eye"></i> <span id="style-text">Mixed View</span>
+                                        </button>
+                                        <button class="btn btn-sm btn-secondary" onclick="mdPipeline.toggleSpin()">
+                                            <i class="fas fa-sync"></i> Spin
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fill Missing Residues Tab -->
+            <div id="fill-missing" class="tab-content">
+                <div class="card">
+                    <h2><i class="fas fa-puzzle-piece"></i> Fill Missing Residues</h2>
+                    <p class="card-description">
+                        Detect missing residues in the experimental structure using RCSB annotations and complete them
+                        with ESMFold. You can choose which chains to include in the completion.
+                    </p>
+                    <p class="form-text text-muted" style="margin-top: 6px; font-size: 0.9em;">
+                        <i class="fas fa-book"></i> If you use this workflow in your research, please cite: <a href="https://esmatlas.com/about" target="_blank" rel="noopener noreferrer">ESM Atlas</a>
+                    </p>
+
+                    <div class="prep-sections">
+                        <div class="prep-section">
+                            <h3><i class="fas fa-search"></i> Detect Missing Residues</h3>
+                            <button class="btn btn-primary" id="detect-missing-residues">
+                                <i class="fas fa-search"></i> Analyze Missing Residues
+                            </button>
+                            <div id="missing-status" class="status-message" style="margin-top: 10px;"></div>
+                        </div>
+
+                        <div class="prep-section" id="missing-chains-section" style="display: none;">
+                            <h3><i class="fas fa-link"></i> Select Chains for Completion</h3>
+                            <p class="option-description">
+                                Chains listed below have missing residues. Select which chains you want to rebuild with ESMFold.
+                            </p>
+                            <div id="missing-chains-list" class="multi-checkbox-group">
+                                <!-- Missing chains checkboxes will be rendered here -->
+                            </div>
+                            <small class="form-help">
+                                At least one chain must be selected to build a completed structure.
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="prep-section prep-section-fullwidth" id="trim-residues-section" style="display: none;">
+                        <h3><i class="fas fa-cut"></i> Trim Residues from Edges (Optional)</h3>
+                        <p class="option-description">
+                            Optionally trim residues from the N-terminal and/or C-terminal edges of selected chains. 
+                            This only removes residues from the edges, not from loops in between.
+                        </p>
+                        <div class="trim-info-box" id="trim-info-box-content">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Note:</strong> Only missing residues at the <strong>N-terminal edge</strong> (beginning of sequence) and <strong>C-terminal edge</strong> (end of sequence) can be trimmed. 
+                            Missing residues in internal loops (discontinuities in the middle of the sequence) cannot be trimmed using this tool and will be filled by ESMFold.
+                        </div>
+                        <div id="trim-residues-list" class="trim-residues-container">
+                            <!-- Trim controls for each chain will be rendered here -->
+                        </div>
+                        <button class="btn btn-secondary" id="apply-trim" style="margin-top: 15px;">
+                            <i class="fas fa-check"></i> Apply Trimming
+                        </button>
+                        <div id="trim-status" class="status-message" style="margin-top: 10px; display: none;"></div>
+                    </div>
+
+                    <!-- Chain Minimization Option -->
+                    <div class="prep-section" id="chain-minimization-section" style="display: none; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; border: 1px solid #dee2e6;">
+                        <h3><i class="fas fa-compress-arrows-alt"></i> Energy Minimization (Optional)</h3>
+                        <div class="form-check" style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+                            <input class="form-check-input" type="checkbox" id="minimize-chains-checkbox" style="width: 20px; height: 20px; cursor: pointer;">
+                            <label class="form-check-label" for="minimize-chains-checkbox" style="cursor: pointer; font-weight: 500; flex: 1;">
+                                <strong>Energy minimize ESMFold-generated chains</strong>
+                            </label>
+                        </div>
+                        <small class="form-text text-muted" style="display: block; margin-top: 8px; margin-left: 30px;">
+                            <i class="fas fa-info-circle"></i> Recommended: Minimization resolve structural clashes
+                        </small>
+                        <div id="minimization-chains-list" style="display: none; margin-top: 15px; margin-left: 30px;">
+                            <strong>Select chains to minimize:</strong>
+                            <div id="minimization-chains-checkboxes" class="multi-checkbox-group" style="margin-top: 10px;">
+                                <!-- Chain checkboxes will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="prep-actions">
+                        <button class="btn btn-primary" id="build-complete-structure" disabled>
+                            <i class="fas fa-magic"></i> Build Completed Structure
+                        </button>
+                        <button class="btn btn-secondary" id="preview-completed-structure" disabled>
+                            <i class="fas fa-eye"></i> Preview Completed Structure
+                        </button>
+                        <button class="btn btn-secondary" id="preview-superimposed-structure" disabled>
+                            <i class="fas fa-layer-group"></i> View Superimposed Structures
+                        </button>
+                        <button class="btn btn-info" id="download-completed-structure" disabled>
+                            <i class="fas fa-download"></i> Download Completed PDB
+                        </button>
+                    </div>
+
+                    <div class="prep-status" id="missing-summary" style="display: none;">
+                        <h3><i class="fas fa-info-circle"></i> Missing Residues Summary</h3>
+                        <div class="status-content" id="missing-summary-content">
+                            <!-- Missing residues summary will be displayed here -->
+                        </div>
+                    </div>
+
+                    <div class="prep-actions" id="sequence-viewer-actions" style="display: none; margin-top: 1rem;">
+                        <button class="btn btn-secondary" id="view-protein-sequences">
+                            <i class="fas fa-dna"></i> View Protein Sequences
+                        </button>
+                    </div>
+
+                    <div class="prepared-structure-preview" id="sequence-viewer-section" style="display: none;">
+                        <h3><i class="fas fa-dna"></i> Protein Sequence Viewer</h3>
+                        <p class="card-description" style="margin-bottom: 15px;">
+                            View protein sequences for all chains. Chain colors match the structure visualization. Missing residues are shown in grey.
+                        </p>
+                        <div id="sequence-viewer-content" class="sequence-viewer-container">
+                            <!-- Sequence viewer will be rendered here -->
+                        </div>
+                    </div>
+
+                    <div class="prepared-structure-preview" id="completed-structure-preview" style="display: none;">
+                        <h3><i class="fas fa-eye"></i> Structure Comparison Preview</h3>
+                        <p class="card-description" style="margin-bottom: 15px;">
+                            Compare the completed structure (right) with the original crystal structure (left) to see the added missing residues.
+                        </p>
+                        <div class="preview-content" style="display: flex; justify-content: center; width: 100%; padding: 0;">
+                            <div class="structure-comparison-container" style="display: flex; gap: 20px; flex-direction: row; width: 100%; max-width: 1400px; align-items: flex-start; justify-content: center;">
+                                <!-- Original Structure Viewer -->
+                                <div class="comparison-viewer" style="flex: 0 1 48%; min-width: 450px; max-width: 48%;">
+                                    <h4 style="text-align: center; margin-bottom: 10px; font-size: 14px;">
+                                        <i class="fas fa-dna"></i> Original Crystal Structure
+                                    </h4>
+                                    <div id="original-molecule-viewer" class="molecule-viewer" style="border: 2px solid #007bff; border-radius: 5px; width: 100%; height: 500px; position: relative;">
+                                        <div id="original-ngl-viewer" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;"></div>
+                                        <div id="original-viewer-controls" class="viewer-controls" style="display: none; justify-content: center; position: relative; z-index: 10;">
+                                            <button class="btn btn-sm btn-secondary" onclick="mdPipeline.resetOriginalView()">
+                                                <i class="fas fa-home"></i> Reset
+                                            </button>
+                                            <button class="btn btn-sm btn-secondary" onclick="mdPipeline.toggleOriginalRepresentation()">
+                                                <i class="fas fa-eye"></i> <span id="original-style-text">Mixed</span>
+                                            </button>
+                                            <button class="btn btn-sm btn-secondary" onclick="mdPipeline.toggleOriginalSpin()">
+                                                <i class="fas fa-sync"></i> Spin
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Completed Structure Viewer -->
+                                <div class="comparison-viewer" style="flex: 0 1 48%; min-width: 450px; max-width: 48%;">
+                                    <h4 style="text-align: center; margin-bottom: 10px; font-size: 14px;">
+                                        <i class="fas fa-puzzle-piece"></i> Completed Structure
+                                    </h4>
+                                    <div id="completed-molecule-viewer" class="molecule-viewer" style="border: 2px solid #28a745; border-radius: 5px; width: 100%; height: 500px; position: relative;">
+                                        <div id="completed-ngl-viewer" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;"></div>
+                                        <div id="completed-viewer-controls" class="viewer-controls" style="display: none; justify-content: center; position: relative; z-index: 10;">
+                                            <button class="btn btn-sm btn-secondary" onclick="mdPipeline.resetCompletedView()">
+                                                <i class="fas fa-home"></i> Reset
+                                            </button>
+                                            <button class="btn btn-sm btn-secondary" onclick="mdPipeline.toggleCompletedRepresentation()">
+                                                <i class="fas fa-eye"></i> <span id="completed-style-text">Mixed</span>
+                                            </button>
+                                            <button class="btn btn-sm btn-secondary" onclick="mdPipeline.toggleCompletedSpin()">
+                                                <i class="fas fa-sync"></i> Spin
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="prepared-structure-preview" id="superimposed-structure-preview" style="display: none;">
+                        <h3><i class="fas fa-layer-group"></i> Superimposed Structure View</h3>
+                        <p class="card-description" style="margin-bottom: 15px;">
+                            View both the original crystal structure (original colors) and completed structure (different chain colors) superimposed in the same viewer to see which residues were filled.
+                        </p>
+                        <div class="preview-content" style="display: flex; justify-content: center; width: 100%; padding: 0;">
+                            <div class="structure-comparison-container" style="width: 100%; max-width: 1400px;">
+                                <!-- Superimposed Structure Viewer -->
+                                <div class="comparison-viewer" style="width: 100%;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                        <div>
+                                            <span style="color: #007bff; font-weight: 600;"><i class="fas fa-dna"></i> Original Crystal Structure</span>
+                                            <span style="margin: 0 10px;">|</span>
+                                            <span style="color: #28a745; font-weight: 600;"><i class="fas fa-puzzle-piece"></i> Completed Structure</span>
+                                        </div>
+                                    </div>
+                                    <div id="superimposed-molecule-viewer" class="molecule-viewer" style="border: 2px solid #007bff; border-radius: 5px; width: 100%; height: 600px; position: relative;">
+                                        <div id="superimposed-ngl-viewer" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;"></div>
+                                        <div id="superimposed-viewer-controls" class="viewer-controls" style="display: none; gap: 10px;">
+                                            <button class="btn btn-sm btn-secondary" onclick="mdPipeline.resetSuperimposedView()">
+                                                <i class="fas fa-home"></i> Reset
+                                            </button>
+                                            <button class="btn btn-sm btn-secondary" onclick="mdPipeline.toggleSuperimposedRepresentation()">
+                                                <i class="fas fa-eye"></i> <span id="superimposed-style-text">Cartoon</span>
+                                            </button>
+                                            <button class="btn btn-sm btn-secondary" onclick="mdPipeline.toggleSuperimposedSpin()">
+                                                <i class="fas fa-sync"></i> Spin
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Structure Preparation Tab -->
+            <div id="structure-prep" class="tab-content">
+                <div class="card">
+                    <h2><i class="fas fa-tools"></i> Structure Preparation for AMBER</h2>
+                    <p class="card-description">Prepare the protein structure for AMBER force field generation by cleaning and modifying the PDB file.</p>
+                    
+                    <div class="prep-sections">
+                        <div class="prep-section">
+                            <h3><i class="fas fa-trash"></i> Remove Components</h3>
+                            <div class="prep-options">
+                                <div class="prep-option">
+                                    <label class="checkbox-container">
+                                        <input type="checkbox" id="remove-water" checked disabled>
+                                        <span class="checkmark"></span>
+                                        Remove water molecules
+                                    </label>
+                                    <p class="option-description">Remove all water molecules (HOH, WAT, TIP3, etc.) from the structure</p>
+                                </div>
+                                
+                                <div class="prep-option">
+                                    <label class="checkbox-container">
+                                        <input type="checkbox" id="remove-ions" checked disabled>
+                                        <span class="checkmark"></span>
+                                        Remove ions
+                                    </label>
+                                    <p class="option-description">Remove all ions (Na+, Cl-, K+, Mg2+, etc.) from the structure</p>
+                                </div>
+                                
+                                <div class="prep-option">
+                                    <label class="checkbox-container">
+                                        <input type="checkbox" id="remove-hydrogens" checked disabled>
+                                        <span class="checkmark"></span>
+                                        Remove hydrogen atoms
+                                    </label>
+                                    <p class="option-description">Remove all hydrogen atoms from the protein structure</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="prep-section">
+                            <h3><i class="fas fa-plus-circle"></i> Add Capping Groups and Select Protein  Chains</h3>
+                            <div class="prep-options">
+                                <div class="prep-option">
+                                    <label class="checkbox-container">
+                                        <input type="checkbox" id="add-nme" checked>
+                                        <span class="checkmark"></span>
+                                        Add NME group (C-terminal)
+                                    </label>
+                                    <p class="option-description">Add N-methyl amide (NME) group to C-terminal residues</p>
+                                </div>
+                                
+                                <div class="prep-option">
+                                    <label class="checkbox-container">
+                                        <input type="checkbox" id="add-ace" checked>
+                                        <span class="checkmark"></span>
+                                        Add ACE group (N-terminal)
+                                    </label>
+                                    <p class="option-description">Add acetyl (ACE) group to N-terminal residues</p>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Preserve Chains for FF Generation:</label>
+                                    <div id="chain-selection" class="multi-checkbox-group">
+                                        <!-- Chain checkboxes will be rendered here -->
+                                    </div>
+                                    <small class="form-help">Select one or more protein chains to include in preparation</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="prep-section">
+                            <h3><i class="fas fa-pills"></i> Ligand Handling</h3>
+                            <div class="prep-options">
+                                <div class="prep-option">
+                                    <label class="checkbox-container">
+                                        <input type="checkbox" id="preserve-ligands">
+                                        <span class="checkmark"></span>
+                                        Preserve ligands
+                                    </label>
+                                    <p class="option-description">Keep ligands in the structure and append them at the end</p>
+                                </div>
+                                
+                                <div class="prep-option">
+                                    <div class="checkbox-with-button">
+                                        <label class="checkbox-container">
+                                            <input type="checkbox" id="separate-ligands">
+                                            <span class="checkmark"></span>
+                                            Create separate ligand file
+                                        </label>
+                                        <button class="btn btn-sm btn-outline-primary" id="download-ligand" disabled>
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                    </div>
+                                    <p class="option-description">Extract ligands to a separate PDB file for individual processing</p>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Select Ligands to Preserve</label>
+                                    <div id="ligand-selection" class="multi-checkbox-group">
+                                        <!-- Ligand checkboxes will be rendered here -->
+                                    </div>
+                                    <small class="form-help">Tick ligands to include. Unselected ligands will be ignored.</small>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="prep-actions">
+                        <button class="btn btn-primary" id="prepare-structure">
+                            <i class="fas fa-magic"></i> Prepare Structure
+                        </button>
+                        <button class="btn btn-secondary" id="preview-prepared">
+                            <i class="fas fa-eye"></i> Preview Prepared Structure
+                        </button>
+                        <button class="btn btn-info" id="download-prepared">
+                            <i class="fas fa-download"></i> Download Prepared PDB
+                        </button>
+                    </div>
+
+                    <div class="prep-status" id="prep-status" style="display: none;">
+                        <h3><i class="fas fa-info-circle"></i> Preparation Status</h3>
+                        <div class="status-content" id="prep-status-content">
+                            <!-- Status information will be displayed here -->
+                        </div>
+                    </div>
+
+                    <div class="prepared-structure-preview" id="prepared-structure-preview" style="display: none;">
+                        <h3><i class="fas fa-eye"></i> Prepared Structure Preview</h3>
+                        <div class="preview-content">
+                            <div class="structure-info">
+                                <p><strong>Original atoms</strong> <span style="font-size:0.9em; color:#6c757d;">(protein without H, before capping):</span> <span id="original-atoms"></span></p>
+                                <p><strong>Prepared atoms</strong> <span style="font-size:0.9em; color:#6c757d;">(protein without H, after capping):</span> <span id="prepared-atoms"></span></p>
+                                <p><strong>Removed components:</strong> <span id="removed-components"></span></p>
+                                <p><strong>Added capping groups:</strong> <span id="added-capping"></span></p>
+                                <p><strong>Ligands preserved:</strong> <span id="preserved-ligands"></span></p>
+                            </div>
+                            <div class="structure-visualization">
+                                <div id="prepared-molecule-viewer" class="molecule-viewer">
+                                    <div id="prepared-ngl-viewer" style="width: 100%; height: 100%; min-height: 300px;"></div>
+                                    <div id="prepared-viewer-controls" class="viewer-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-secondary" onclick="mdPipeline.resetPreparedView()">
+                                            <i class="fas fa-home"></i> Reset View
+                                        </button>
+                                        <button class="btn btn-sm btn-secondary" onclick="mdPipeline.togglePreparedRepresentation()">
+                                            <i class="fas fa-eye"></i> <span id="prepared-style-text">Mixed View</span>
+                                        </button>
+                                        <button class="btn btn-sm btn-secondary" onclick="mdPipeline.togglePreparedSpin()">
+                                            <i class="fas fa-sync"></i> Spin
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Docking Section (visible only when ligands are preserved and present) -->
+                    <div class="card plumed-section-card" id="docking-section" style="display: none; margin-top: 20px;">
+                        <h2 class="plumed-toggle-header" id="docking-toggle-header">
+                            <i class="fas fa-vial"></i> Ligand Docking
+                            <i class="fas fa-chevron-down toggle-icon" id="docking-toggle-icon"></i>
+                        </h2>
+                        <p class="section-description">
+                            Configure docking for preserved ligands using AutoDock Vina and Meeko. Select which ligands to dock,
+                            define the Vina bounding box with live visualization, then run docking and choose poses.
+                        </p>
+                        <div class="custom-plumed-section" id="docking-content-section">
+                            <!-- Ligand Selection -->
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label><i class="fas fa-pills"></i> Select Ligands to Dock</label>
+                                <p class="option-description" style="margin-bottom: 10px;">
+                                    Choose which preserved ligands should be included in docking calculations.
+                                </p>
+                                <div id="docking-ligand-selection" class="multi-checkbox-group">
+                                    <!-- Ligand checkboxes will be rendered here -->
+                                </div>
+                            </div>
+
+                            <!-- Collapsible: Docking Setup (Visualization + Box Dimensions) -->
+                            <div class="docking-setup-collapsible" style="margin-top: 10px; border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden;">
+                                <div class="docking-setup-header" id="docking-setup-toggle" style="background: linear-gradient(135deg, #6f42c1 0%, #8e5dd4 100%); color: white; padding: 12px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                                    <span><i class="fas fa-cube"></i> Docking Search Space Setup</span>
+                                    <i class="fas fa-chevron-up" id="docking-setup-toggle-icon" style="transition: transform 0.3s ease;"></i>
+                                </div>
+                                <div class="docking-setup-content" id="docking-setup-content" style="padding: 15px; background: white;">
+                                    <!-- Docking Search Space Visualization -->
+                                    <div class="prepared-structure-preview" id="docking-structure-preview">
+                                        <h4 style="margin-top: 0;"><i class="fas fa-eye"></i> Search Space Visualization</h4>
+                                        <p class="card-description" style="margin-bottom: 10px;">
+                                            The protein–ligand system is shown below. For each selected ligand, a bounding box (10×10×10 Å by default)
+                                            represents the Vina search space. Adjust box dimensions below to update the visualization live.
+                                        </p>
+                                        <!-- NGL Viewer - Matching section 2 aspect ratio -->
+                                        <div id="docking-ngl-viewer" class="molecule-viewer" style="border: 2px solid #6f42c1; border-radius: 5px; width: 100%; max-width: 700px; height: 500px; position: relative; margin: 0 auto;">
+                                            <!-- Docking NGL visualization will be added here -->
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Box Dimensions - Below Visualization -->
+                                    <div id="docking-box-controls" style="margin-top: 15px; background: #f8f9fa; padding: 15px; border-radius: 5px; border: 1px solid #dee2e6;">
+                                        <h5 style="margin-top: 0; margin-bottom: 15px;"><i class="fas fa-sliders-h"></i> Box Dimensions for Selected Ligands</h5>
+                                        <div id="docking-setup-list" style="display: flex; flex-wrap: wrap; gap: 15px;">
+                                            <!-- Per-ligand box controls will be rendered here in a horizontal layout -->
+                                        </div>
+                                    </div>
+
+                                    <div class="prep-actions" style="margin-top: 15px;">
+                                        <button class="btn btn-primary" id="run-docking">
+                                            <i class="fas fa-vial"></i> Run Docking with Above Settings
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="docking-status" class="status-message" style="display: none; margin-top: 10px;"></div>
+                            
+                            <div id="docking-poses-container" style="display: none; margin-top: 20px;">
+                                <h4><i class="fas fa-project-diagram"></i> Visualize Binding Poses</h4>
+                                <p class="option-description">
+                                    Browse through docked poses for each ligand. Use the navigation arrows to view different binding modes.
+                                    Select your preferred pose for the simulation.
+                                </p>
+                                
+                                <!-- Ligand selector tabs -->
+                                <div id="docking-ligand-tabs" class="docking-ligand-tabs">
+                                    <!-- Ligand tabs will be rendered here -->
+                                </div>
+                                
+                                <!-- 3D Viewer with pose navigation -->
+                                <div class="docking-poses-viewer-wrapper">
+                                    <div id="docking-poses-viewer" class="docking-poses-viewer"></div>
+                                    
+                                    <!-- Pose navigation controls overlay -->
+                                    <div class="pose-nav-controls">
+                                        <button type="button" class="pose-nav-btn pose-nav-prev" id="pose-prev-btn" title="Previous Pose">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </button>
+                                        <div class="pose-info-display">
+                                            <div class="pose-mode-label" id="pose-mode-label">Original Ligand</div>
+                                            <div class="pose-energy-label" id="pose-energy-label"></div>
+                                            <div class="pose-color-legend">
+                                                <span><span class="legend-dot original"></span> Original (green)</span>
+                                                <span><span class="legend-dot docked"></span> Docked (coral)</span>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="pose-nav-btn pose-nav-next" id="pose-next-btn" title="Next Pose">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Pose selection summary -->
+                                <div id="docking-poses-list" class="docking-poses-selection">
+                                    <!-- Radio buttons for final selection will be rendered here -->
+                                </div>
+                                
+                                <div class="prep-actions" style="margin-top: 15px;">
+                                    <button class="btn btn-success" id="apply-docking-poses">
+                                        <i class="fas fa-check"></i> Use Selected Pose
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulation Parameters Tab -->
+            <div id="simulation-params" class="tab-content">
+                <div class="card">
+                    <h2><i class="fas fa-sliders-h"></i> Simulation Parameters</h2>
+                    
+                    <div class="params-grid">
+                        <div class="param-section">
+                            <h3><i class="fas fa-cube"></i> System Setup</h3>
+                            <div class="form-group">
+                                <label for="box-type">Box Type:</label>
+                                <select id="box-type">
+                                    <option value="cuboid">Cuboid</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="box-size">
+                                    Distance (Å):
+                                    <i class="fas fa-info-circle" 
+                                       style="color: #007bff; margin-left: 5px; cursor: help;" 
+                                       data-toggle="tooltip" 
+                                       data-placement="top"
+                                       data-html="true"
+              title="The minimum distance between any atom originally present in solute and the edge of the periodic box is given by the distance parameter.">
+                                    </i>
+                                </label>
+                                <input type="number" id="box-size" value="10" step="1" min="5">
+                            </div>
+                        </div>
+
+                        <div class="param-section" id="ligand-forcefield-section" style="display: none;">
+                            <h3><i class="fas fa-atom"></i> Ligand Force Field</h3>
+                            <div class="form-group">
+                                <label for="ligand-forcefield">Ligand Force Field:</label>
+                                <select id="ligand-forcefield">
+                                    <option value="gaff2">gaff2</option>
+                                    <option value="gaff">gaff</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <button type="button" class="btn btn-primary" onclick="mdPipeline.generateLigandFF(event)">
+                                    <i class="fas fa-cogs"></i> Generate FF for Ligand
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="param-section">
+                            <h3><i class="fas fa-flask"></i> Force Field & Water Model</h3>
+                            <div class="form-group">
+                                <label for="force-field">Protein Force Field:</label>
+                                <select id="force-field">
+                                    <option value="ff14SB">ff14SB</option>
+                                    <option value="ff19SB">ff19SB</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="water-model">Water Model:</label>
+                                <select id="water-model">
+                                    <option value="tip3p">TIP3P</option>
+                                    <option value="spce">SPCE</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="add-ions">Add Ions:</label>
+                                <div class="ion-controls">
+                                    <select id="add-ions">
+                                        <option value="None">None</option>
+                                        <option value="Na+">Na+</option>
+                                        <option value="Cl-">Cl-</option>
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="mdPipeline.calculateNetCharge(event)">
+                                        <i class="fas fa-calculator"></i> Net Charge
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="param-section">
+                            <h3><i class="fas fa-thermometer-half"></i> Temperature & Pressure</h3>
+                            <div class="form-group">
+                                <label for="temperature">Temperature (K):</label>
+                                <input type="number" id="temperature" value="300" step="5" min="200" max="400">
+                            </div>
+                            <div class="form-group">
+                                <label for="pressure">Pressure (atm):</label>
+                                <input type="number" id="pressure" value="1.0" step="0.1" min="0.1">
+                            </div>
+                            <div class="form-group">
+                                <label for="coupling-type">Thermostat:</label>
+                                <select id="coupling-type">
+                                    <option value="langevin">Langevin</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="param-section">
+                            <h3><i class="fas fa-clock"></i> Integration Parameters</h3>
+                            <div class="form-group">
+                                <label for="timestep">Time Step (ps):</label>
+                                <input type="number" id="timestep" value="0.002" step="0.001" min="0.001" max="0.005">
+                            </div>
+                            <div class="form-group">
+                                <label for="cutoff">Cutoff Distance (Ang):</label>
+                                <input type="number" id="cutoff" value="10.0" step="1" min="8" max="20">
+                            </div>
+                            <div class="form-group">
+                                <label for="electrostatic">Electrostatic:</label>
+                                <select id="electrostatic">
+                                    <option value="pme">PME</option>
+                                </select>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulation Steps Tab -->
+            <div id="simulation-steps" class="tab-content">
+                <div class="card">
+                    <h2><i class="fas fa-list-ol"></i> Simulation Steps Configuration</h2>
+                    
+                    <div class="steps-container">
+                        <div class="step-item">
+                            <div class="step-header">
+                                <h3><i class="fas fa-lock"></i> Restrained Minimization</h3>
+                                <label class="switch">
+                                    <input type="checkbox" id="enable-restrained-min" checked disabled>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="step-content" id="restrained-min-content">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="restrained-steps">Steps:</label>
+                                        <input type="number" id="restrained-steps" value="10000" step="100" min="100">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="restrained-force">Force Constant (kJ/mol/Å²):</label>
+                                        <input type="number" id="restrained-force" value="10" step="1" min="1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-item">
+                            <div class="step-header">
+                                <h3><i class="fas fa-compress"></i> Minimization</h3>
+                                <label class="switch">
+                                    <input type="checkbox" id="enable-minimization" checked disabled>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="step-content" id="minimization-content">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="min-steps">Steps:</label>
+                                        <input type="number" id="min-steps" value="20000" step="500" min="1000">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="min-algorithm">Algorithm:</label>
+                                        <select id="min-algorithm">
+                                            <option value="cg">Conjugate Gradient</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-item">
+                            <div class="step-header">
+                                <h3><i class="fas fa-fire"></i> NPT Heating</h3>
+                                <label class="switch">
+                                    <input type="checkbox" id="enable-nvt" checked disabled>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="step-content" id="nvt-content">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="nvt-steps">Steps:</label>
+                                        <input type="number" id="nvt-steps" value="50000" step="5000" min="10000">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="nvt-temp">Target Temperature (K):</label>
+                                        <input type="number" id="nvt-temp" value="300" step="5" min="200">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-item">
+                            <div class="step-header">
+                                <h3><i class="fas fa-compress-arrows-alt"></i> NPT Equilibration</h3>
+                                <label class="switch">
+                                    <input type="checkbox" id="enable-npt" checked disabled>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="step-content" id="npt-content">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="npt-steps">Steps:</label>
+                                        <input type="number" id="npt-steps" value="100000" step="10000" min="20000">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="npt-temp">Temperature (K):</label>
+                                        <input type="number" id="npt-temp" value="300" step="5" min="200">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="npt-pressure">Pressure (atm):</label>
+                                        <input type="number" id="npt-pressure" value="1.0" step="0.1" min="0.1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-item">
+                            <div class="step-header">
+                                <h3><i class="fas fa-play"></i> Production Run(NPT)</h3>
+                                <label class="switch">
+                                    <input type="checkbox" id="enable-production" checked disabled>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="step-content" id="production-content">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="prod-steps">Steps:</label>
+                                        <input type="number" id="prod-steps" value="1000000" step="100000" min="100000">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="prod-temp">Temperature (K):</label>
+                                        <input type="number" id="prod-temp" value="300" step="5" min="200">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="prod-pressure">Pressure (atm):</label>
+                                        <input type="number" id="prod-pressure" value="1.0" step="0.1" min="0.1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File Generation Tab -->
+            <div id="file-generation" class="tab-content">
+                <!-- Guidance Note Card -->
+                <div class="plumed-citation-note">
+                    <i class="fas fa-info-circle"></i>
+                    <div class="citation-content">
+                        <p>Click on <strong>Generate All Files</strong>. If you want to run <strong>biased simulations</strong> using PLUMED, proceed to the <strong>next section (PLUMED)</strong> to configure collective variables. Otherwise, download all files here and you're all set!</p>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2><i class="fas fa-file-download"></i> Generate Simulation Files</h2>
+                    
+                    <div class="generation-controls">
+                        <button class="btn btn-primary" id="generate-files">
+                            <i class="fas fa-magic"></i> Generate All Files
+                        </button>
+                        <button class="btn btn-secondary" id="preview-files">
+                            <i class="fas fa-eye"></i> Preview Files
+                        </button>
+                        <button class="btn btn-info" id="preview-solvated">
+                            <i class="fas fa-tint"></i> Preview Solvated Protein
+                        </button>
+                        <button class="btn btn-success" id="download-solvated">
+                            <i class="fas fa-download"></i> Download Solvated Protein
+                        </button>
+                    </div>
+
+                    <div class="files-preview" id="files-preview" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 style="margin: 0;"><i class="fas fa-files"></i> Generated Files</h3>
+                            <button class="btn btn-primary" id="add-simulation-file" style="margin-left: 10px;">
+                                <i class="fas fa-plus"></i> Add Simulation File
+                            </button>
+                        </div>
+                        <div class="files-list" id="files-list">
+                            <!-- Generated files will be listed here -->
+                        </div>
+                    </div>
+
+                    <div class="download-section" id="download-section" style="display: none;">
+                        <h3><i class="fas fa-download"></i> Download Files</h3>
+                        <div class="download-options">
+                            <button class="btn btn-success" id="download-zip">
+                                <i class="fas fa-file-archive"></i> Download All as ZIP
+                            </button>
+                            
+                        </div>
+                    </div>
+
+                    <div class="simulation-summary" id="simulation-summary" style="display: none;">
+                        <h3><i class="fas fa-chart-line"></i> Simulation Summary</h3>
+                        <div class="summary-content" id="summary-content">
+                            <!-- Simulation summary will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PLUMED Section -->
+            <div id="plumed" class="tab-content">
+                <!-- PLUMED Citation Note -->
+                <div class="plumed-citation-note">
+                    <i class="fas fa-info-circle"></i>
+                    <div class="citation-content">
+                        <p><strong>Note:</strong> All CVs are taken from <a href="https://www.plumed.org/doc-v2.9/user-doc/html/index.html" target="_blank" rel="noopener noreferrer"><strong>PLUMED v2.9</strong> <i class="fas fa-external-link-alt"></i></a> documentation.</p>
+                        <p>If you use PLUMED in your research, please cite it. <a href="https://www.plumed.org/cite" target="_blank" rel="noopener noreferrer">Citation information <i class="fas fa-external-link-alt"></i></a></p>
+                    </div>
+                </div>
+                
+                <!-- PLUMED Collective Variables Section -->
+                <div class="card plumed-section-card">
+                    <h2>
+                        <i class="fas fa-chart-line"></i> PLUMED Collective Variables
+                    </h2>
+                    <p class="section-description">
+                        Configure Collective Variables (CVs) for biased MD simulations. Select a CV from the sidebar to view documentation and examples.
+                    </p>
+                    
+                    <div class="plumed-container" id="plumed-container">
+                        <!-- Left Sidebar: CV List -->
+                        <div class="plumed-sidebar">
+                            <div class="sidebar-header">
+                                <h3><i class="fas fa-list"></i> Collective Variables</h3>
+                                <div class="search-box">
+                                    <input type="text" id="cv-search" placeholder="Search CVs..." class="search-input">
+                                    <i class="fas fa-search search-icon"></i>
+                                </div>
+                            </div>
+                            <div class="cv-list" id="cv-list">
+                                <!-- CV items will be populated by JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <!-- Right Panel: Documentation and Editor -->
+                        <div class="plumed-content">
+                            <div class="content-header" id="content-header" style="display: none;">
+                                <h3 id="cv-title"></h3>
+                            </div>
+                            
+                            <div class="content-body" id="content-body">
+                                <div class="welcome-message" id="welcome-message">
+                                    <i class="fas fa-hand-pointer fa-3x"></i>
+                                    <h3>Select a Collective Variable</h3>
+                                    <p>Choose a CV from the left sidebar to view its documentation and configure it for your simulation.</p>
+                                </div>
+                                
+                                <!-- Documentation Section -->
+                                <div class="cv-documentation" id="cv-documentation" style="display: none;">
+                                    <div class="doc-section" id="cv-module-section" style="display: none;">
+                                        <h4><i class="fas fa-puzzle-piece"></i> Module</h4>
+                                        <div class="doc-content" id="cv-module"></div>
+                                    </div>
+                                    
+                                    <div class="doc-section">
+                                        <h4><i class="fas fa-info-circle"></i> Description</h4>
+                                        <div class="doc-content" id="cv-description"></div>
+                                    </div>
+                                    
+                                    <div class="doc-section">
+                                        <h4><i class="fas fa-code"></i> Syntax</h4>
+                                        <div class="doc-content">
+                                            <pre class="syntax-box" id="cv-syntax"></pre>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="doc-section" id="cv-glossary-section" style="display: none;">
+                                        <h4><i class="fas fa-book"></i> Glossary of keywords and components</h4>
+                                        <div class="doc-content" id="cv-glossary"></div>
+                                    </div>
+                                    
+                                    <div class="doc-section" id="cv-options-section" style="display: none;">
+                                        <h4><i class="fas fa-list-ul"></i> Options</h4>
+                                        <div class="doc-content" id="cv-options"></div>
+                                    </div>
+                                    
+                                    <div class="doc-section" id="cv-components-section" style="display: none;">
+                                        <h4><i class="fas fa-cogs"></i> Components</h4>
+                                        <div class="doc-content" id="cv-components"></div>
+                                    </div>
+                                    
+                                    <div class="doc-section">
+                                        <h4><i class="fas fa-book"></i> Examples</h4>
+                                        <div class="doc-content">
+                                            <pre class="example-box" id="cv-example"></pre>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="doc-section" id="cv-notes-section" style="display: none;">
+                                        <h4><i class="fas fa-sticky-note"></i> Notes</h4>
+                                        <div class="doc-content" id="cv-notes"></div>
+                                    </div>
+                                    
+                                    <div class="doc-section" id="cv-related-section" style="display: none;">
+                                        <h4><i class="fas fa-link"></i> Related Collective Variables</h4>
+                                        <div class="doc-content" id="cv-related"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Editable Editor Section -->
+                                <div class="cv-editor-section" id="cv-editor-section" style="display: none;">
+                                    <div class="editor-header">
+                                        <h4><i class="fas fa-edit"></i> Your Configuration</h4>
+                                        <div class="editor-actions">
+                                            <button class="btn btn-sm btn-info" id="copy-config">
+                                                <i class="fas fa-copy"></i> Copy
+                                            </button>
+                                            <button class="btn btn-sm btn-primary" id="view-pdb">
+                                                <i class="fas fa-eye"></i> View PDB
+                                            </button>
+                                            <button class="btn btn-sm btn-secondary" id="reset-cv">
+                                                <i class="fas fa-redo"></i> Reset to Example
+                                            </button>
+                                            <button class="btn btn-sm btn-success" id="save-config">
+                                                <i class="fas fa-save"></i> Save
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <textarea id="cv-editor" class="cv-editor" placeholder="Enter your PLUMED configuration here..."></textarea>
+                                    <div class="editor-footer">
+                                        <span class="char-count"><span id="char-count">0</span> characters</span>
+                                        <span class="line-count"><span id="line-count">0</span> lines</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Saved Configurations -->
+                                <div class="saved-configs" id="saved-configs" style="display: none;">
+                                    <h4><i class="fas fa-bookmark"></i> Saved Configurations</h4>
+                                    <div class="configs-list" id="configs-list">
+                                        <!-- Saved configs will be shown here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Custom PLUMED File Section -->
+                <div class="card plumed-section-card" id="custom-plumed-card">
+                    <h2 class="plumed-toggle-header" id="custom-plumed-toggle-header">
+                        <i class="fas fa-file-code"></i> Write Custom PLUMED File
+                        <i class="fas fa-chevron-down toggle-icon" id="custom-plumed-toggle-icon"></i>
+                    </h2>
+                    <p class="section-description">
+                        Write your custom PLUMED configuration from scratch. This editor allows you to create a complete PLUMED input file.
+                    </p>
+                    
+                    <div class="custom-plumed-section" id="custom-plumed-section">
+                        <div class="custom-editor-header">
+                            <h4><i class="fas fa-edit"></i> Custom PLUMED Configuration</h4>
+                            <div class="editor-actions">
+                                <button class="btn btn-sm btn-info" id="copy-custom-plumed">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                                <button class="btn btn-sm btn-primary" id="view-pdb-custom">
+                                    <i class="fas fa-eye"></i> View PDB
+                                </button>
+                                <button class="btn btn-sm btn-success" id="download-custom-plumed">
+                                    <i class="fas fa-save"></i> Save
+                                </button>
+                                <button class="btn btn-sm btn-secondary" id="clear-custom-plumed">
+                                    <i class="fas fa-trash"></i> Clear
+                                </button>
+                            </div>
+                        </div>
+                        <textarea id="custom-plumed-editor" class="custom-plumed-editor" placeholder="Write your PLUMED configuration here...&#10;&#10;Example:&#10;# PLUMED input file&#10;d1: DISTANCE ATOMS=1,2&#10;PRINT ARG=d1 FILE=colvar.dat"></textarea>
+                        <div class="editor-footer">
+                            <span class="char-count"><span id="custom-char-count">0</span> characters</span>
+                            <span class="line-count"><span id="custom-line-count">0</span> lines</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Generate Simulation Files Section -->
+                <div class="card plumed-section-card" id="generate-simulation-files-card">
+                    <h2 class="plumed-toggle-header" id="generate-simulation-files-toggle-header">
+                        <i class="fas fa-cogs"></i> Generate Simulation Files
+                        <i class="fas fa-chevron-down toggle-icon" id="generate-simulation-files-toggle-icon"></i>
+                    </h2>
+                    <p class="section-description">
+                        Generate and download simulation files for your PLUMED setup.
+                    </p>
+                    
+                    <div class="generate-simulation-files-section" id="generate-simulation-files-section">
+                        <div class="generation-controls" style="display: flex; gap: 10px; padding: 20px;">
+                            <button class="btn btn-primary" id="plumed-generate-files">
+                                <i class="fas fa-magic"></i> Generate Files
+                            </button>
+                            <button class="btn btn-secondary" id="plumed-preview-files">
+                                <i class="fas fa-eye"></i> Preview Files
+                            </button>
+                            <button class="btn btn-success" id="plumed-download-files">
+                                <i class="fas fa-download"></i> Download Files
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Step Navigation Controls -->
+        <div class="step-navigation">
+            <button class="nav-btn prev-btn" id="prev-tab" disabled>
+                <i class="fas fa-chevron-left"></i> Previous
+            </button>
+            <div class="step-indicator">
+                <span id="current-step">1</span> of <span id="total-steps">7</span>
+            </div>
+            <button class="nav-btn next-btn" id="next-tab">
+                Next <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2025 MD Simulation Pipeline. Built for molecular dynamics simulations.</p>
+        </footer>
+    </div>
+
+        <!-- PDB Viewer Modal -->
+        <div class="modal" id="pdb-viewer-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; overflow: auto;">
+            <div class="modal-content" style="max-width: 90%; max-height: 90vh; margin: 5vh auto; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #ddd; background: #f8f9fa; border-radius: 8px 8px 0 0;">
+                    <h3 style="margin: 0;"><i class="fas fa-file-code"></i> Viewer PDB File</h3>
+                    <button class="btn btn-sm btn-secondary" id="close-pdb-modal" style="margin: 0;">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 15px; overflow: auto; max-height: calc(90vh - 100px);">
+                    <div id="pdb-content-loading" style="text-align: center; padding: 20px;">
+                        <i class="fas fa-spinner fa-spin"></i> Loading PDB file...
+                    </div>
+                    <div id="pdb-content-error" style="display: none; color: #dc3545; padding: 20px; text-align: center;">
+                        <i class="fas fa-exclamation-triangle"></i> <span id="pdb-error-message"></span>
+                    </div>
+                    <pre id="pdb-content" style="display: none; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.4; background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word;"></pre>
+                </div>
+            </div>
+    </div>
+
+    <script src="../js/script.js"></script>
+    <script src="../js/plumed_cv_docs.js"></script>
+    <script src="../js/plumed.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+initial minimization solvent + ions
+ &cntrl
+  imin   = 1,
+  maxcyc = 10000,
+  ncyc   = 5000,
+  ntb    = 1,
+  ntr    = 1,
+  ntxo   = 1,	
+  cut    = 10
+/
+Restrain 
+10
+RES 1 202
+END
+END
+

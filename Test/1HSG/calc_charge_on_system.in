@@ -1,0 +1,11 @@
+source leaprc.protein.ff14SB
+source leaprc.gaff2
+
+loadamberparams MK1.frcmod
+MK1 = loadmol2 MK1.mol2
+
+x = loadpdb tleap_ready.pdb
+
+charge x
+
+quit

@@ -1,0 +1,99 @@
+<!-- PLUMED Collective Variables Section -->
+<div id="plumed" class="tab-content">
+    <div class="card">
+        <h2><i class="fas fa-chart-line"></i> PLUMED Collective Variables</h2>
+        <p class="section-description">
+            Configure Collective Variables (CVs) for biased MD simulations. Select a CV from the sidebar to view documentation and examples.
+        </p>
+        
+        <div class="plumed-container">
+            <!-- Left Sidebar: CV List -->
+            <div class="plumed-sidebar">
+                <div class="sidebar-header">
+                    <h3><i class="fas fa-list"></i> Collective Variables</h3>
+                    <div class="search-box">
+                        <input type="text" id="cv-search" placeholder="Search CVs..." class="search-input">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                </div>
+                <div class="cv-list" id="cv-list">
+                    <!-- CV items will be populated by JavaScript -->
+                </div>
+            </div>
+            
+            <!-- Right Panel: Documentation and Editor -->
+            <div class="plumed-content">
+                <div class="content-header" id="content-header" style="display: none;">
+                    <h3 id="cv-title"></h3>
+                    <button class="btn btn-sm btn-secondary" id="reset-cv">
+                        <i class="fas fa-redo"></i> Reset to Example
+                    </button>
+                </div>
+                
+                <div class="content-body" id="content-body">
+                    <div class="welcome-message" id="welcome-message">
+                        <i class="fas fa-hand-pointer fa-3x"></i>
+                        <h3>Select a Collective Variable</h3>
+                        <p>Choose a CV from the left sidebar to view its documentation and configure it for your simulation.</p>
+                    </div>
+                    
+                    <!-- Documentation Section -->
+                    <div class="cv-documentation" id="cv-documentation" style="display: none;">
+                        <div class="doc-section">
+                            <h4><i class="fas fa-info-circle"></i> Description</h4>
+                            <div class="doc-content" id="cv-description"></div>
+                        </div>
+                        
+                        <div class="doc-section">
+                            <h4><i class="fas fa-code"></i> Syntax</h4>
+                            <div class="doc-content">
+                                <pre class="syntax-box" id="cv-syntax"></pre>
+                            </div>
+                        </div>
+                        
+                        <div class="doc-section">
+                            <h4><i class="fas fa-book"></i> Example</h4>
+                            <div class="doc-content">
+                                <pre class="example-box" id="cv-example"></pre>
+                            </div>
+                        </div>
+                        
+                        <div class="doc-section" id="cv-components-section" style="display: none;">
+                            <h4><i class="fas fa-cogs"></i> Components</h4>
+                            <div class="doc-content" id="cv-components"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Editable Editor Section -->
+                    <div class="cv-editor-section" id="cv-editor-section" style="display: none;">
+                        <div class="editor-header">
+                            <h4><i class="fas fa-edit"></i> Your Configuration</h4>
+                            <div class="editor-actions">
+                                <button class="btn btn-sm btn-info" id="copy-config">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                                <button class="btn btn-sm btn-success" id="save-config">
+                                    <i class="fas fa-save"></i> Save
+                                </button>
+                            </div>
+                        </div>
+                        <textarea id="cv-editor" class="cv-editor" placeholder="Enter your PLUMED configuration here..."></textarea>
+                        <div class="editor-footer">
+                            <span class="char-count"><span id="char-count">0</span> characters</span>
+                            <span class="line-count"><span id="line-count">0</span> lines</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Saved Configurations -->
+                    <div class="saved-configs" id="saved-configs" style="display: none;">
+                        <h4><i class="fas fa-bookmark"></i> Saved Configurations</h4>
+                        <div class="configs-list" id="configs-list">
+                            <!-- Saved configs will be shown here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

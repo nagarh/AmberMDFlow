@@ -1,0 +1,5 @@
+#Two-stage minimization: sidechains first
+ &cntrl
+  imin=1, maxcyc=300, ncyc=150,
+  ntb=0, cut=10.0, igb=1
+ /

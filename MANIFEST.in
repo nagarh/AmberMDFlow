@@ -1,0 +1,19 @@
+# Include package data
+recursive-include ambermdflow/html *
+recursive-include ambermdflow/css *
+recursive-include ambermdflow/js *
+
+# Include documentation
+include README.md
+include LICENSE
+include SETUP_STEPS.md
+
+# Exclude development/test files
+exclude .gitignore
+exclude .dockerignore
+exclude Dockerfile
+prune Test
+prune __pycache__
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude .DS_Store

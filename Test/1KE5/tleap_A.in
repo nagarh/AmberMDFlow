@@ -1,0 +1,4 @@
+source leaprc.protein.ff14SB
+protein = loadpdb /home/hn533621/AmberMDFlow/output/1KE5_chain_A_esmfold.pdb
+saveamberparm protein 1KE5_chain_A_esmfold.prmtop 1KE5_chain_A_esmfold.inpcrd
+quit
