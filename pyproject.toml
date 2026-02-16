@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ambermdflow"
-version = "0.1.3"
+version = "0.0.1"
 description = "Web-based MD simulation pipeline with AMBER, ESMFold, docking, and PLUMED"
 readme = "README.md"
 license = {text = "MIT"}

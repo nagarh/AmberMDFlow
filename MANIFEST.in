@@ -6,7 +6,6 @@ recursive-include ambermdflow/js *
 # Include documentation
 include README.md
 include LICENSE
-include SETUP_STEPS.md
 
 # Exclude development/test files
 exclude .gitignore
