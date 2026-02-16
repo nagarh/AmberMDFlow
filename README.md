@@ -4,7 +4,7 @@
 
 # AmberMDFlow
 
-**AmberMDFlow** is a web-based pipeline for preparing structures, setting up molecular dynamics (MD) simulations with the AMBER force field. It integrates structure completion (ESMFold), preparation, force field parameterization, simulation file generation, and PLUMED-based biased MD in a single interface.
+**AmberMDFlow** is a web-based pipeline for preparing structures, setting up molecular dynamics (MD) simulations with the AMBER force field. It integrates structure completion (ESMFold), preparation, force field parameterization, simulation file generation, and PLUMED-based biased MD in a single interface. This is the beta version.
 
 ---
 
@@ -68,7 +68,7 @@ AmberMDFlow requires scientific packages that are only available via **conda** (
 | `gemmi` | Structure file parsing (required by Meeko) |
 
 ---
-<!----
+
 ### Option 1: pip install (recommended)
 
 ```bash
@@ -79,18 +79,18 @@ conda activate ambermdflow
 # Step 2: Install conda-only dependencies
 conda install -c conda-forge -c bioconda ambertools pymol-open-source autodock-vina openbabel rdkit gemmi -y
 
-# Step 3: Install AmberMDFlow from PyPI
-pip install ambermdflow
+# Step 3: Install AmberMDFlow from Test PyPI
+pip install --extra-index-url https://test.pypi.org/simple/ ambermdflow
 
 # Step 4: Run the web app
 ambermdflow
 ```
---->
+
 Open your browser at **http://localhost:7860**
 
 ---
 
-### Docker (no conda/pip needed)
+### Option 2: Docker (no conda/pip needed)
 **build from source:**
 ```bash
 git clone https://github.com/nagarh/AmberMDFlow.git
