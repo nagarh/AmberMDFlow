@@ -2599,9 +2599,9 @@ ves: VES ARG=distance SIGMA=0.1 PACE=500`,
     }
 
     async generatePlumedFiles() {
-        // Check if plumed.dat exists
+        // Check if plumed.dat exists via API (use plumedApiFetch so same session as save is used)
         try {
-            const checkResponse = await fetch('/output/plumed.dat', { method: 'HEAD' });
+            const checkResponse = await plumedApiFetch('/api/get-file?filename=plumed.dat', { cache: 'no-store' });
             if (!checkResponse.ok) {
                 alert('Please save a PLUMED file (plumed.dat) first before generating simulation files.');
                 return;
@@ -2678,9 +2678,9 @@ ves: VES ARG=distance SIGMA=0.1 PACE=500`,
     }
 
     async previewPlumedFiles() {
-        // Use the same preview functionality as section 6, but include plumed.dat
+        // Use the same preview functionality as section 6, but include plumed.dat (use session-aware API)
         try {
-            const resp = await fetch('/api/get-generated-files');
+            const resp = await plumedApiFetch('/api/get-generated-files');
             const data = await resp.json();
             if (!data.success) {
                 alert('❌ Error: ' + (data.error || 'Unable to load files'));
